@@ -1,11 +1,15 @@
 # Code based on https://github.com/CentralLabFacilities/object_recognition/blob/master/scripts/darknet_to_darkflow.py
 
+# Class mapping from https://www.kaggle.com/yufengg/emnist-gpu-keras-to-tf
+
 import sys
 import os
 from shutil import copyfile
 from lxml import etree
 
 def createXML(annotations_list, height, width, depth, ID):
+    class_mapping = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt'
+
     annotation = etree.Element('annotation')
 
     fo = etree.Element('folder')
@@ -46,7 +50,7 @@ def createXML(annotations_list, height, width, depth, ID):
         d_1 = etree.Element('difficult')
         bb = etree.Element('bndbox')
 
-        n.text = str(annotations_list[j][0])#classname
+        n.text = str(class_mapping[int(annotations_list[j][0])])#classname
         p.text = 'center'
         t.text = str(1)
         d_1.text = str(0)
