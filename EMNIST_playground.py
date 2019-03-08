@@ -92,20 +92,3 @@ for i in range(num_gen):
                 file.write(',')
             file.write('\n')
 
-        
-
-        
-       
-            
-        
-
-
-
-
-        
-        
-    
-
-
-
-
