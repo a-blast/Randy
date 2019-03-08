@@ -31,8 +31,6 @@ misc. TODO:
 -> hook data directly into darkflow??? (save disk IO time...)
 """
 
-import imutils
-import cv2
 import numpy as np
 
 
@@ -42,14 +40,40 @@ def generate(text=None, size=(500,500)):
     :param text: User supplied text to put in image. If None, it is randomly generated
     :param size: Size of exported canvas
     :returns: the img and YOLO compatible XML annotation
-    :rtype: {img: img, XML: XML}
+    :rtype: dict, {img: img, XML: XML}
 
     """
+    img_out = np.zeros((size[0],size[1],3))
     base_canvas = np.zeros(size)
     regions_remaining = [size]
 
+    
+
     #TODO implement the rest...
     pass
+
+def calculate_line_parameters(height):
+    """Get random params (that make sense!) for lines to be written
+
+    :param height: height of canvas
+    :param width: width of canvas
+    :returns: base character height & line spacing
+    :rtype: (float,float)
+
+    """
+    # Assuming character height to be 32
+    default_num_lines = height/32
+    new_num_lines     = np.random.normal(default_num_lines,
+                                           default_num_lines/2)
+
+    new_num_lines = 1 if (new_num_lines < 1) else new_num_lines
+
+    height_per_line     = height/new_num_lines
+    space_between_lines = np.random.uniform(0, int(height_per_line/2))
+    character_height    = height_per_line - space_between_lines
+
+    return (character_height, space_between_lines)
+
 
 
 

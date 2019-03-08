@@ -29,16 +29,16 @@ debug=False
 shear_fn=lambda: np.random.random_integers(-10, 10)
 
 for i in range(num_gen):
-    t1=time.time()
-    im=np.zeros((im_size[0],im_size[1],3)); # Initialize image
-    check_mask=np.zeros((im_size[0],im_size[1])) # Initialize binary mask to keep track of where images have been placed
-    annotation=[];    
-    annotation2=[];
+    im = np.zeros((im_size[0], im_size[1], 3)) # Initialize image
+    check_mask=np.zeros((im_size[0], im_size[1])) # Initialize binary mask to keep track of where images have been placed
+    annotation=[]
+    annotation2=[]
     num_char=np.random.randint(low=20,high=50); # Randomly sample number of chars to place on image
     for j in range(num_char):
-        idx=np.random.randint(low=0, high=num_subj);
-        sample=np.reshape(df.iloc[idx,1:],(28,28)).T; 
-        label=df.iloc[idx,0];
+        idx=np.random.randint(low=0, high=num_subj)
+        print(df.shape)
+        sample=np.reshape(df.iloc[idx,1:],(28,28)).T
+        label=df.iloc[idx,0]
         #plt.imshow(sample); plt.show()
 
         # Randomly sample shear augmentation
