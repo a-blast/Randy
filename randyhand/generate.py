@@ -32,6 +32,7 @@ misc. TODO:
 """
 
 import numpy as np
+import requests
 
 
 def generate(text=None, size=(500,500)):
@@ -43,11 +44,16 @@ def generate(text=None, size=(500,500)):
     :rtype: dict, {img: img, XML: XML}
 
     """
-    img_out = np.zeros((size[0],size[1],3))
+    width, height = size
+    img_out = np.zeros((width, height, 3))
     base_canvas = np.zeros(size)
-    regions_remaining = [size]
+
+    character_height, space_between_lines = calculate_line_parameters(height)
+
+    next_word = get_next_word_function(text)
 
     
+
 
     #TODO implement the rest...
     pass
@@ -75,6 +81,23 @@ def calculate_line_parameters(height):
     return (character_height, space_between_lines)
 
 
+def get_next_word_function(text):
+    """Function generator closure that gets the next word depending if text was provided or not
+
+    :param text: list of strings or None
+    :returns: a function to get the next word
+    :rtype: function
+
+    """
+    if text:
+        text.reverse()
+        next_word = lambda: text.pop() if text else "FIN"
+    else:
+        word_site = "http://svnweb.freebsd.org/csrg/share/dict/words?view=co&content-type=text/plain"
+        response = requests.get(word_site)
+        text = response.content.splitlines()
+        next_word = lambda: np.random.choice(text)
+    return next_word
 
 
 def get_letter_emnist_index(letter):
