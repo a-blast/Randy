@@ -16,17 +16,13 @@ import os
 
 # First column has label, using mappings to get associated class
 df = pd.read_csv("DATA/emnist-balanced-train.csv") # Literally never used pandas before
+print(df.shape)
 num_subj=df.shape[0] # Number of subjects to sample from
 
-# Import mappings txt
-f = open('DATA/emnist-balanced-mapping.txt', 'r')   
-content = f.read() 
-f.close()
-
 im_size=(320,320) # Size of image to generate
-num_gen=1 # Number of images to generate
+num_gen=10 # Number of images to generate
 debug=False
-shear_fn=lambda: np.random.random_integers(-10, 10)
+shear_fn=lambda: np.random.random_integers(-5, 5)
 
 for i in range(num_gen):
     t1=time.time()
@@ -37,7 +33,8 @@ for i in range(num_gen):
     num_char=np.random.randint(low=20,high=50); # Randomly sample number of chars to place on image
     for j in range(num_char):
         idx=np.random.randint(low=0, high=num_subj);
-        sample=np.reshape(df.iloc[idx,1:],(28,28)).T; 
+        stream=df.iloc[idx,1:].values
+        sample=np.reshape(stream,(28,28)).T; 
         label=df.iloc[idx,0];
         #plt.imshow(sample); plt.show()
 
