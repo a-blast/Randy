@@ -33,9 +33,18 @@ misc. TODO:
 
 import numpy as np
 import requests
+from PIL import Image
+from functools import partial, reduce
+import math
+import string
+import pandas as pd
 
 
-def generate(text=None, size=(500,500)):
+s=time.time()
+img=generate(emnist)
+o=time.time()-s
+
+def generate(letterSource, text=None, size=(500,500)):
     """User facing function for handling generation & annotation of images.
 
     :param text: User supplied text to put in image. If None, it is randomly generated
@@ -44,21 +53,65 @@ def generate(text=None, size=(500,500)):
     :rtype: dict, {img: img, XML: XML}
 
     """
+    init_char_size = 28
     width, height = size
-    img_out = np.zeros((width, height, 3))
-    base_canvas = np.zeros(size)
+    base_canvas = Image.fromarray(np.zeros(size))
 
-    character_height, space_between_lines = calculate_line_parameters(height)
+    while True:
+        char_size, space_between_lines, num_lines = calculate_line_parameters(size, init_char_size)
+        max_letters_per_line = width/char_size
+        if max_letters_per_line >= 3:
+            break
 
+    # next_word is a function
     next_word = get_next_word_function(text)
 
+    # emnist = pd.read_csv("../data/emnist-balanced-train.csv", header=None)
+    class_mapping = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt'
+
+    annotation_dict = {}
+    emnist_dict = {}
+    for index, letter in enumerate(class_mapping):
+        is_letter = lambda df: (df[0] == index)
+        emnist_dict[letter] = letterSource.loc[is_letter, 1:]
+
+    letter_index = lambda letter: letter if letter in class_mapping else letter.upper()
+    # NOTE: might want to make xOffset dynamically initialized
+    xOffset = 0
+    yOffset = space_between_lines
+    num_characters_remaining = width//char_size
+    punctuation_stripper = str.maketrans({key: None for key in string.punctuation})
+
+
+    while(num_lines > 0):
+        while(num_characters_remaining >= 3):
+            word = next_word().decode("UTF-8").translate(punctuation_stripper)
+            if len(word) > max_letters_per_line:
+                print("HELP!")
+                continue
+            elif len(word) > num_characters_remaining:
+                break
+
+            for (index, letter) in enumerate(word):
+                imgIn = Image.fromarray(np.uint8(np.reshape
+                                                 (emnist_dict[letter_index(letter)].sample().values,
+                                                  (init_char_size,init_char_size)))) \
+                             .transpose(Image.TRANSPOSE) \
+                             .resize((char_size,char_size))
+                base_canvas.paste(imgIn, (xOffset, yOffset))
+                xOffset = xOffset+char_size
+
+            xOffset = xOffset + char_size
+
+            num_characters_remaining = num_characters_remaining - len(word) - 1
     
+        num_lines = num_lines - 1
+        yOffset = yOffset + space_between_lines + char_size
+        xOffset = 0
+        num_characters_remaining = max_letters_per_line
+    return base_canvas
 
-
-    #TODO implement the rest...
-    pass
-
-def calculate_line_parameters(height):
+def calculate_line_parameters(size, letter_size):
     """Get random params (that make sense!) for lines to be written
 
     :param height: height of canvas
@@ -68,17 +121,18 @@ def calculate_line_parameters(height):
 
     """
     # Assuming character height to be 32
-    default_num_lines = height/32
+    height, width = size
+    default_num_lines = height/letter_size
     new_num_lines     = np.random.normal(default_num_lines,
                                            default_num_lines/2)
 
-    new_num_lines = 1 if (new_num_lines < 1) else new_num_lines
+    new_num_lines = 1 if (new_num_lines < 1) else int(math.floor(new_num_lines))
 
     height_per_line     = height/new_num_lines
     space_between_lines = np.random.uniform(0, int(height_per_line/2))
     character_height    = height_per_line - space_between_lines
 
-    return (character_height, space_between_lines)
+    return (int(math.ceil(character_height)), int(math.floor(space_between_lines)), new_num_lines)
 
 
 def get_next_word_function(text):
@@ -98,15 +152,4 @@ def get_next_word_function(text):
         text = response.content.splitlines()
         next_word = lambda: np.random.choice(text)
     return next_word
-
-
-def get_letter_emnist_index(letter):
-    """Get a random index for a specific letter class to slice the emnist dataset accordingly
-
-    :param letter: single character to get a slice for
-    :returns: a slice() object that will get a random member of the appropriate class in emnist
-    :rtype: slice object
-
-    """
-    pass
 
