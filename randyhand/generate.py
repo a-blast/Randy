@@ -40,11 +40,7 @@ import string
 import pandas as pd
 
 
-s=time.time()
-img=generate(emnist)
-o=time.time()-s
-
-def generate(letterSource, text=None, size=(500,500)):
+def getGenerator(text=None, size=(500,500)):
     """User facing function for handling generation & annotation of images.
 
     :param text: User supplied text to put in image. If None, it is randomly generated
@@ -55,61 +51,64 @@ def generate(letterSource, text=None, size=(500,500)):
     """
     init_char_size = 28
     width, height = size
-    base_canvas = Image.fromarray(np.zeros(size))
-
-    while True:
-        char_size, space_between_lines, num_lines = calculate_line_parameters(size, init_char_size)
-        max_letters_per_line = width/char_size
-        if max_letters_per_line >= 3:
-            break
-
+    emnist = pd.read_csv("../data/emnist-balanced-train.csv", header=None)
+    class_mapping = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt'
     # next_word is a function
     next_word = get_next_word_function(text)
-
-    # emnist = pd.read_csv("../data/emnist-balanced-train.csv", header=None)
-    class_mapping = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt'
 
     annotation_dict = {}
     emnist_dict = {}
     for index, letter in enumerate(class_mapping):
         is_letter = lambda df: (df[0] == index)
-        emnist_dict[letter] = letterSource.loc[is_letter, 1:]
+        emnist_dict[letter] = emnist.loc[is_letter, 1:]
 
-    letter_index = lambda letter: letter if letter in class_mapping else letter.upper()
-    # NOTE: might want to make xOffset dynamically initialized
-    xOffset = 0
-    yOffset = space_between_lines
-    num_characters_remaining = width//char_size
-    punctuation_stripper = str.maketrans({key: None for key in string.punctuation})
+    def generator():
+        base_canvas = Image.fromarray(np.zeros(size))
 
-
-    while(num_lines > 0):
-        while(num_characters_remaining >= 3):
-            word = next_word().decode("UTF-8").translate(punctuation_stripper)
-            if len(word) > max_letters_per_line:
-                print("HELP!")
-                continue
-            elif len(word) > num_characters_remaining:
+        while True:
+            char_size, space_between_lines, num_lines = calculate_line_parameters(size, init_char_size)
+            max_letters_per_line = width/char_size
+            if max_letters_per_line >= 3:
                 break
 
-            for (index, letter) in enumerate(word):
-                imgIn = Image.fromarray(np.uint8(np.reshape
-                                                 (emnist_dict[letter_index(letter)].sample().values,
-                                                  (init_char_size,init_char_size)))) \
-                             .transpose(Image.TRANSPOSE) \
-                             .resize((char_size,char_size))
-                base_canvas.paste(imgIn, (xOffset, yOffset))
-                xOffset = xOffset+char_size
+        letter_index = lambda letter: letter if letter in class_mapping else letter.upper()
 
-            xOffset = xOffset + char_size
-
-            num_characters_remaining = num_characters_remaining - len(word) - 1
-    
-        num_lines = num_lines - 1
-        yOffset = yOffset + space_between_lines + char_size
+        # NOTE: might want to make xOffset dynamically initialized
         xOffset = 0
-        num_characters_remaining = max_letters_per_line
-    return base_canvas
+        yOffset = space_between_lines
+        num_characters_remaining = width//char_size
+        print(num_lines)
+
+        while(num_lines > 0):
+            while(num_characters_remaining >= 3):
+                word = next_word()
+                if len(word) > max_letters_per_line:
+                    continue
+                elif (len(word) > num_characters_remaining
+                      or yOffset+char_size > height):
+                    break
+
+                for letter in word:
+                    imgIn = Image.fromarray(np.uint8(np.reshape
+                                                     (emnist_dict[letter_index(letter)] \
+                                                      .sample().values,
+                                                      (init_char_size,init_char_size)))) \
+                                 .transpose(Image.TRANSPOSE) \
+                                 .resize((char_size,char_size))
+                    base_canvas.paste(imgIn, (xOffset, yOffset))
+                    xOffset = xOffset+char_size
+
+                xOffset = xOffset + char_size
+
+                num_characters_remaining = num_characters_remaining - len(word) - 1
+            
+            num_lines = num_lines - 1
+            yOffset = yOffset + space_between_lines + char_size
+            xOffset = 0
+            num_characters_remaining = max_letters_per_line
+        return base_canvas
+
+    return generator
 
 def calculate_line_parameters(size, letter_size):
     """Get random params (that make sense!) for lines to be written
@@ -143,13 +142,16 @@ def get_next_word_function(text):
     :rtype: function
 
     """
+    punctuation_stripper = str.maketrans({key: None for key in string.punctuation})
     if text:
         text.reverse()
-        next_word = lambda: text.pop() if text else "FIN"
+        next_word = lambda: text.pop().translate(punctuation_stripper) if text else "FIN"
     else:
         word_site = "http://svnweb.freebsd.org/csrg/share/dict/words?view=co&content-type=text/plain"
         response = requests.get(word_site)
         text = response.content.splitlines()
-        next_word = lambda: np.random.choice(text)
+        next_word = lambda: np.random.choice(text) \
+                                     .decode("UTF-8") \
+                                     .translate(punctuation_stripper)
     return next_word
 
