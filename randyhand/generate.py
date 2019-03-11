@@ -7,28 +7,27 @@ GOAL: To try to emulate pictures of human handwriting using synthesized
 text from the emnist data set
 
 TODO:
-1. Create base img canvas
+DONE 1. Create base img canvas 
 2. Add random background noise/shapes/objects
-3. Calculate how many lines of text & characters per line from uniform distribution
-4. Calculate offset between lines (vertically) from narrow normal distribution
-5. Get random text (random_word package), or use user supplied text
+DONE 3. Calculate how many lines of text & characters per line from uniform distribution DONE
+DONE 4. Calculate offset between lines (vertically) from narrow normal distribution DONE
+DONE 5. Get random text (random_word package), or use user supplied text DONE
 --> Could be word, number, or word with number appended.
-6. Map letters to randomly selected members of the character's class
-7. Impose letter spacing value sampled from a normal distribution
-8. create word images based on selected characters and imposed variations
-9. Merge images together w/ spaces to make lines
+DONE 6. Map letters to randomly selected members of the character's class DONE
+DONE 7. Impose letter spacing value sampled from a normal distribution DONE
+DONE 8. create word images based on selected characters and imposed variations DONE
+DONE 9. Merge images together w/ spaces to make lines DONE
 --> if more lines are remaining, go to next line at step 5
-10. Set random base transformations (rotations, affine, grow/shrink) & transform canvas
+10. Set random base transformations (rotations, affine, grow/shrink) & transform
 ##### In an image of handwriting, the direction, perspective,
 ##### and size will be "roughly" homogeneous, I would think
 11. Update all x,y,w,h values for the bounding boxes
-12. Translate annotation into XML
-12. return image and XML
+DONE 12. Translate annotation into XML
+DONE 12. return image and XML
 
 misc. TODO:
--> wrap this in a CLI
+DOING -> wrap this in a CLI
 -> add to docker file w/ emnist
--> hook data directly into darkflow??? (save disk IO time...)
 """
 
 import numpy as np
@@ -42,7 +41,7 @@ import xml.etree.cElementTree as ET
 
 
 
-def getGenerator(text=None, size=(500,500)):
+def getGenerator(emnist_path, text=None, size=(500,500)):
     """User facing function for handling generation & annotation of images.
 
     :param text: User supplied text to put in image. If None, it is randomly generated
@@ -53,7 +52,7 @@ def getGenerator(text=None, size=(500,500)):
     """
     init_char_size = 28
     width, height = size
-    emnist = pd.read_csv("../data/emnist-balanced-train.csv", header=None)
+    emnist = pd.read_csv(emist_path+"/emnist-balanced-train.csv", header=None)
     class_mapping = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt'
     # next_word is a function
     next_word = get_next_word_function(text)
@@ -115,81 +114,17 @@ def getGenerator(text=None, size=(500,500)):
 
     return generator
 
-def apply_random_transform(imgObj):
-    img = imgObj["img"]
-    annotations = imgObj["annotations"]
-    def find_coeffs(pa, pb):
-        matrix = []
-        for p1, p2 in zip(pa, pb):
-            matrix.append([p1[0], p1[1], 1, 0, 0, 0, -p2[0]*p1[0], -p2[0]*p1[1]])
-            matrix.append([0, 0, 0, p1[0], p1[1], 1, -p2[1]*p1[0], -p2[1]*p1[1]])
-
-        A = np.matrix(matrix, dtype=np.float)
-        B = np.array(pb).reshape(8)
-
-        #res = np.dot(np.linalg.inv(A.T * A) * A.T, B)
-        res = np.dot(np.linalg.inv(A), B)
-        return np.array(res).reshape(8)
-
-    width, height = img.size
-    pa = [(0, 0), (width, 0), (width, height), (0, height)]
-
-    sF1 = int(np.random.uniform(0,0.4)*width)
-    sF2 = int(np.random.uniform(0,0.4)*height)
-    pivot = int(np.random.uniform(0, min(sF1,sF2)))
-    left_in = [(-sF1, -sF2-pivot), (width+sF1, -sF2+pivot),
-               (width+sF1, height+sF2-pivot), (-sF1, height+sF2+pivot)]
-    right_in = [(-sF1, -sF2+pivot), (width+sF1, -sF2-pivot),
-                (width+sF1, height+sF2+pivot), (-sF1, height+sF2-pivot)]
-    bottom_in = [(-sF1+pivot, -sF2), (width+sF1-pivot, -sF2),
-                 (width+sF1+pivot, height+sF2), (-sF1-pivot, height+sF2)]
-
-    top_in = [(-sF1-pivot, -sF2), (width+sF1+pivot, -sF2),
-              (width+sF1-pivot, height+sF2), (-sF1+pivot, height+sF2)]
-
-    lc_in = [(-sF1-pivot, -sF2-pivot), (width+sF1, -sF2),
-                  (width+sF1+pivot, height+sF2+pivot), (-sF1, height+sF2)]
-    rc_in = [(-sF1+pivot, -sF2+pivot), (width+sF1, -sF2),
-                  (width+sF1-pivot, height+sF2-pivot), (-sF1, height+sF2)]
-
-    transforms = [left_in, right_in, bottom_in, top_in, lc_in, rc_in]
-
-    left_in = [(-100, 0), (width, 0),
-               (width, height), (0, height)]
-
-    # coeffs = find_coeffs(pa, transforms[np.random.random_integers(0,len(transforms)-1)])
-    coeffs = find_coeffs(pa, left_in)
-    print(coeffs)
-    img = img.transform((width, height), Image.PERSPECTIVE, coeffs, Image.BICUBIC)
-    annotations = list(map(lambda annotation: apply_transform_annotations(coeffs, annotation),
-                      annotations))
-    return {"img":img, "annotations": annotations}
-
-def apply_transform_annotations(coeffs, annotation):
-    a, b, c, d, e, f, g, h = coeffs
-    x_min, y_min, x_max, y_max = annotation[1]
-
-    calc_new_point = lambda p: ((a*p[0]+b*p[1]+c)/(g*p[0]+h*p[1]+1),(d*p[0]+e*p[1]+f)/(g*p[0]+h*p[1]+1))
-
-    bounding_points = [(x_min, y_min), (y_min, x_max), (x_min, y_max), (x_max, y_max)]
-    new_bounding_points = list(map(calc_new_point, bounding_points))
-    print(new_bounding_points)
-    x_min = min(new_bounding_points[:][0])
-    x_max = max(new_bounding_points[:][0])
-    y_min = min(new_bounding_points[:][1])
-    y_max = max(new_bounding_points[:][1])
-
-    #return (annotation[0], (x_min, y_min, x_max, y_max))
-    return (annotation[0], new_bounding_points)
 
 def to_XML(annotations, imgSize):
+    """get XML based on annotation format of generate
+    """
     root = ET.Element("annotation")
     tree = ET.ElementTree(root)
-    folder = ET.SubElement(root, "folder").text = "randyhand_data"
+    ET.SubElement(root, "folder").text = "annotations"
     size = ET.SubElement(root, "size")
-    width = ET.SubElement(size, "width").text = str(imgSize[0])
-    height = ET.SubElement(size, "height").text = str(imgSize[1])
-    depth = ET.SubElement(size, "depth").text = "3"
+    ET.SubElement(size, "width").text = str(imgSize[0])
+    ET.SubElement(size, "height").text = str(imgSize[1])
+    ET.SubElement(size, "depth").text = "3"
     ET.SubElement(root, "segmented"). text = "0"
 
     for annotation in annotations:

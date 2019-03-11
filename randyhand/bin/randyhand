@@ -3,6 +3,7 @@
 import randyhand
 import os, sys, functools
 
+
 cwd = os.getcwd()
 if not os.path.exists(cwd+"/randyhand_data"):
     os.mkdir(cwd+"/randyhand_data")
@@ -10,8 +11,9 @@ if not os.path.exists(cwd+"/randyhand_data"):
     os.mkdir(cwd+"/randyhand_data/annotations")
     os.mkdir(cwd+"/randyhand_data/text")
 
-gen = randyhand.getGenerator()
 
+emnist_path = cwd+"/emnist"
+gen = randyhand.getGenerator(emnist_path)
 
 for imgNum in range(100):
     print(imgNum)
