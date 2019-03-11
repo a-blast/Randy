@@ -52,7 +52,7 @@ def getGenerator(emnist_path, text=None, size=(500,500)):
     """
     init_char_size = 28
     width, height = size
-    emnist = pd.read_csv(emist_path+"/emnist-balanced-train.csv", header=None)
+    emnist = pd.read_csv(emnist_path+"/emnist-balanced-train.csv", header=None)
     class_mapping = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt'
     # next_word is a function
     next_word = get_next_word_function(text)
