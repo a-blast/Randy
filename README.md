@@ -24,3 +24,4 @@ exit()
 for 100 generated text images, xml annotations, & corresponding strings.
 
 (for the letter only script, see will_dev and follow the instructions there)
+
