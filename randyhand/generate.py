@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 """randyhand -> generate.
 
@@ -41,7 +41,7 @@ import xml.etree.cElementTree as ET
 
 
 
-def getGenerator(emnist_path, text=None, size=(500, 500)):
+def getGenerator(emnist_path, text=None, size=(608, 608)):
     """User facing function for handling generation & annotation of images.
 
     :param text: User supplied text to put in image.
@@ -141,8 +141,8 @@ def to_XML(annotations, imgSize):
         ET.SubElement(box, "xmax").text = str( annotation[1][2] )
         ET.SubElement(box, "ymin").text = str( annotation[1][1] )
         ET.SubElement(box, "ymax").text = str( annotation[1][3] )
-        
-    return tree
+
+        return tree
 
 def calculate_line_parameters(size, letter_size):
     """Get random params (that make sense!) for lines to be written
@@ -154,12 +154,14 @@ def calculate_line_parameters(size, letter_size):
 
     """
     height, width = size
+    max_chars_per_line = 16
     default_num_lines = height/letter_size
-    new_num_lines     = int(np.random.uniform(2,int(default_num_lines*1.5)))
+    new_num_lines     = int(np.random.uniform(1, 10))
 
     height_per_line     = height/new_num_lines
-    space_between_lines = np.random.uniform(0, int(height_per_line/2))
+    space_between_lines = np.random.uniform(0, int(height_per_line/3))
     character_height    = height_per_line - space_between_lines
+    print("CH:", (character_height < 38 ))
 
     return (int(math.ceil(character_height)), int(math.floor(space_between_lines)), new_num_lines)
 
