@@ -41,7 +41,7 @@ import xml.etree.cElementTree as ET
 
 
 
-def getGenerator(emnist_path, text=None, size=(608, 608)):
+def getGenerator(emnist_path, by_merge, text=None, size=(608, 608)):
     """User facing function for handling generation & annotation of images.
 
     :param text: User supplied text to put in image.
@@ -53,7 +53,8 @@ def getGenerator(emnist_path, text=None, size=(608, 608)):
     """
     init_char_size = 28
     width, height = size
-    emnist = pd.read_csv(emnist_path + "/emnist-balanced-train.csv", header=None)
+    data_ext =  "/emnist-bymerge-train.csv" if by_merge else  "/emnist-balanced-train.csv"
+    emnist = pd.read_csv(emnist_path + data_ext, header=None)
     class_mapping = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt'
     # next_word is a function
     next_word = get_next_word_function(text)
@@ -142,7 +143,7 @@ def to_XML(annotations, imgSize):
         ET.SubElement(box, "ymin").text = str( annotation[1][1] )
         ET.SubElement(box, "ymax").text = str( annotation[1][3] )
 
-        return tree
+    return tree
 
 def calculate_line_parameters(size, letter_size):
     """Get random params (that make sense!) for lines to be written
@@ -161,7 +162,6 @@ def calculate_line_parameters(size, letter_size):
     height_per_line     = height/new_num_lines
     space_between_lines = np.random.uniform(0, int(height_per_line/3))
     character_height    = height_per_line - space_between_lines
-    print("CH:", (character_height < 38 ))
 
     return (int(math.ceil(character_height)), int(math.floor(space_between_lines)), new_num_lines)
 

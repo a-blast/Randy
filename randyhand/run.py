@@ -2,16 +2,17 @@ from .generate import *
 import os, sys, functools, math
 import xml.etree.cElementTree as ET
 
-def run(numImgs):
+def run(numImgs, by_merge=False):
     cwd = os.getcwd()
     if not os.path.exists(cwd+"/randyhand_data"):
+        ut
         os.mkdir(cwd+"/randyhand_data")
         os.mkdir(cwd+"/randyhand_data/img")
         os.mkdir(cwd+"/randyhand_data/annotations")
         os.mkdir(cwd+"/randyhand_data/text")
 
     emnist_path = cwd+"/emnist"
-    gen_data = getGenerator(emnist_path)
+    gen_data = getGenerator(emnist_path, by_merge)
 
     for imgNum in range(numImgs):
 
