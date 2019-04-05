@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='randyhand',
-      version='0.2',
+      version='0.3.5',
       description="Generate random images handwritten words for OCR training",
       url="https://github.com/a-blast/randyhand",
       author="Austin Armstrong",

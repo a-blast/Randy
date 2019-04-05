@@ -1,5 +1,6 @@
-"""
-randyhand -> generate
+# -*- coding: utf-8 -*-
+
+"""randyhand -> generate.
 
 Giving you a random hand to write some training data for OCR.
 
@@ -7,7 +8,7 @@ GOAL: To try to emulate pictures of human handwriting using synthesized
 text from the emnist data set
 
 TODO:
-DONE 1. Create base img canvas 
+DONE 1. Create base img canvas
 2. Add random background noise/shapes/objects
 DONE 3. Calculate how many lines of text & characters per line from uniform distribution DONE
 DONE 4. Calculate offset between lines (vertically) from narrow normal distribution DONE
@@ -33,18 +34,19 @@ DOING -> wrap this in a CLI
 import numpy as np
 import requests
 from PIL import Image
-from functools import partial, reduce
 import math
 import string
 import pandas as pd
+import random
 import xml.etree.cElementTree as ET
 
 
 
-def getGenerator(emnist_path, text=None, size=(500,500)):
+def getGenerator(emnist_path, by_merge, is_random=False, train=True, text=None, size=(608, 608)):
     """User facing function for handling generation & annotation of images.
 
-    :param text: User supplied text to put in image. If None, it is randomly generated
+    :param text: User supplied text to put in image.
+    If None, it is randomly generated
     :param size: Size of exported canvas
     :returns: the img and YOLO compatible XML annotation
     :rtype: dict, {img: img, XML: XML}
@@ -52,7 +54,9 @@ def getGenerator(emnist_path, text=None, size=(500,500)):
     """
     init_char_size = 28
     width, height = size
-    emnist = pd.read_csv(emnist_path+"/emnist-balanced-train.csv", header=None)
+    data_set = "train" if train else "test"
+    data_ext =  "/emnist-bymerge-"+data_set+".csv" if by_merge else "/emnist-balanced-"+data_set+".csv"
+    emnist = pd.read_csv(emnist_path + data_ext, header=None)
     class_mapping = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt'
     # next_word is a function
     next_word = get_next_word_function(text)
@@ -78,10 +82,14 @@ def getGenerator(emnist_path, text=None, size=(500,500)):
         xOffset = 0
         yOffset = space_between_lines
         num_characters_remaining = width//char_size
+        num_lines_remaining = num_lines
 
-        while(num_lines > 0):
+        while(num_lines_remaining > 0):
             while(num_characters_remaining >= 3):
                 word = next_word()
+                if is_random:
+                    word = ''.join(random.sample(word, len(word)))
+
                 if len(word) > max_letters_per_line:
                     continue
                 elif (len(word) > num_characters_remaining
@@ -89,8 +97,9 @@ def getGenerator(emnist_path, text=None, size=(500,500)):
                     break
 
                 for letter in word:
+                    letter = letter_index(letter)
                     imgIn = Image.fromarray(np.uint8(np.reshape
-                                                     (emnist_dict[letter_index(letter)] \
+                                                     (emnist_dict[letter] \
                                                       .sample().values,
                                                       (init_char_size,init_char_size)))) \
                                  .transpose(Image.TRANSPOSE) \
@@ -106,11 +115,11 @@ def getGenerator(emnist_path, text=None, size=(500,500)):
 
                 num_characters_remaining = num_characters_remaining - len(word) - 1
             
-            num_lines = num_lines - 1
+            num_lines_remaining = num_lines_remaining - 1
             yOffset = yOffset + space_between_lines + char_size
             xOffset = 0
             num_characters_remaining = max_letters_per_line
-        return {"img":base_canvas, "annotations":annotations}
+        return {"img":base_canvas, "annotations":annotations, "num_lines": num_lines}
 
     return generator
 
@@ -136,10 +145,10 @@ def to_XML(annotations, imgSize):
         ET.SubElement(obj, "occluded").text = "0"
         box = ET.SubElement(obj, "bndbox")
         ET.SubElement(box, "xmin").text = str(annotation[1][0])
-        ET.SubElement(box, "xmax").text = str( annotation[1][1] )
-        ET.SubElement(box, "ymin").text = str( annotation[1][2] )
+        ET.SubElement(box, "xmax").text = str( annotation[1][2] )
+        ET.SubElement(box, "ymin").text = str( annotation[1][1] )
         ET.SubElement(box, "ymax").text = str( annotation[1][3] )
-        
+
     return tree
 
 def calculate_line_parameters(size, letter_size):
@@ -151,16 +160,13 @@ def calculate_line_parameters(size, letter_size):
     :rtype: (float,float)
 
     """
-    # Assuming character height to be 32
     height, width = size
+    max_chars_per_line = 16
     default_num_lines = height/letter_size
-    new_num_lines     = np.random.normal(default_num_lines,
-                                           default_num_lines/2)
-
-    new_num_lines = 1 if (new_num_lines < 1) else int(math.floor(new_num_lines))
+    new_num_lines     = int(np.random.uniform(1, 10))
 
     height_per_line     = height/new_num_lines
-    space_between_lines = np.random.uniform(0, int(height_per_line/2))
+    space_between_lines = np.random.uniform(0, int(height_per_line/3))
     character_height    = height_per_line - space_between_lines
 
     return (int(math.ceil(character_height)), int(math.floor(space_between_lines)), new_num_lines)

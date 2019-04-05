@@ -1,7 +1,8 @@
 from .generate import *
-import os, sys, functools
+import os, sys, functools, math
+import xml.etree.cElementTree as ET
 
-def run(numImgs):
+def run(numImgs, by_merge=False, is_random=False, train=True):
     cwd = os.getcwd()
     if not os.path.exists(cwd+"/randyhand_data"):
         os.mkdir(cwd+"/randyhand_data")
@@ -10,22 +11,30 @@ def run(numImgs):
         os.mkdir(cwd+"/randyhand_data/text")
 
     emnist_path = cwd+"/emnist"
-    gen = getGenerator(emnist_path)
+    gen_data = getGenerator(emnist_path, by_merge, is_random, train)
 
     for imgNum in range(numImgs):
+
         print(imgNum)
-        out = gen()
-        out["img"].convert("RGB").save(cwd+"/randyhand_data/img/"+str(imgNum).zfill(3)+".jpg")
+        out = gen_data()
+
+        entry_name = str(imgNum).zfill(math.floor(math.log(numImgs))+1)
+
+        out["img"].convert("RGB").save(cwd+"/randyhand_data/img/"+entry_name+".jpg")
 
         xml = out["annotations"]
         xml = to_XML(xml,out["img"].size)
-        xml.write(open(cwd+"/randyhand_data/annotations/"+str(imgNum).zfill(3)+".xml", "w+"),
+        root = xml.getroot()
+
+        ET.SubElement(root, "filename").text = entry_name+".jpg"
+
+        xml.write(open(cwd+"/randyhand_data/annotations/"+entry_name+".xml", "w+"),
                   encoding="unicode")
 
-        string = functools.reduce(
+        text_in_img = functools.reduce(
             lambda text, letter: text+letter,
             list(map(lambda annotation: annotation[0], out["annotations"])))
 
-        string_file = open(cwd+"/randyhand_data/text/"+str(imgNum).zfill(3)+".txt", "w+")
-        string_file.write(string)
+        string_file = open(cwd+"/randyhand_data/text/"+entry_name+".txt", "w+")
+        string_file.write(str(out["num_lines"])+":"+text_in_img)
         string_file.close()
