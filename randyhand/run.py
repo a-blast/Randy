@@ -2,17 +2,16 @@ from .generate import *
 import os, sys, functools, math
 import xml.etree.cElementTree as ET
 
-def run(numImgs, by_merge=False):
+def run(numImgs, by_merge=False, is_random=False, train=True):
     cwd = os.getcwd()
     if not os.path.exists(cwd+"/randyhand_data"):
-        ut
         os.mkdir(cwd+"/randyhand_data")
         os.mkdir(cwd+"/randyhand_data/img")
         os.mkdir(cwd+"/randyhand_data/annotations")
         os.mkdir(cwd+"/randyhand_data/text")
 
     emnist_path = cwd+"/emnist"
-    gen_data = getGenerator(emnist_path, by_merge)
+    gen_data = getGenerator(emnist_path, by_merge, is_random, train)
 
     for imgNum in range(numImgs):
 
@@ -37,5 +36,5 @@ def run(numImgs, by_merge=False):
             list(map(lambda annotation: annotation[0], out["annotations"])))
 
         string_file = open(cwd+"/randyhand_data/text/"+entry_name+".txt", "w+")
-        string_file.write(text_in_img)
+        string_file.write(str(out["num_lines"])+":"+text_in_img)
         string_file.close()

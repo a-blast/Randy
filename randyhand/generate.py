@@ -37,11 +37,12 @@ from PIL import Image
 import math
 import string
 import pandas as pd
+import random
 import xml.etree.cElementTree as ET
 
 
 
-def getGenerator(emnist_path, by_merge, text=None, size=(608, 608)):
+def getGenerator(emnist_path, by_merge, is_random=False, train=True, text=None, size=(608, 608)):
     """User facing function for handling generation & annotation of images.
 
     :param text: User supplied text to put in image.
@@ -53,7 +54,8 @@ def getGenerator(emnist_path, by_merge, text=None, size=(608, 608)):
     """
     init_char_size = 28
     width, height = size
-    data_ext =  "/emnist-bymerge-train.csv" if by_merge else  "/emnist-balanced-train.csv"
+    data_set = "train" if train else "test"
+    data_ext =  "/emnist-bymerge-"+data_set+".csv" if by_merge else "/emnist-balanced-"+data_set+".csv"
     emnist = pd.read_csv(emnist_path + data_ext, header=None)
     class_mapping = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt'
     # next_word is a function
@@ -80,10 +82,14 @@ def getGenerator(emnist_path, by_merge, text=None, size=(608, 608)):
         xOffset = 0
         yOffset = space_between_lines
         num_characters_remaining = width//char_size
+        num_lines_remaining = num_lines
 
-        while(num_lines > 0):
+        while(num_lines_remaining > 0):
             while(num_characters_remaining >= 3):
                 word = next_word()
+                if is_random:
+                    word = ''.join(random.sample(word, len(word)))
+
                 if len(word) > max_letters_per_line:
                     continue
                 elif (len(word) > num_characters_remaining
@@ -109,11 +115,11 @@ def getGenerator(emnist_path, by_merge, text=None, size=(608, 608)):
 
                 num_characters_remaining = num_characters_remaining - len(word) - 1
             
-            num_lines = num_lines - 1
+            num_lines_remaining = num_lines_remaining - 1
             yOffset = yOffset + space_between_lines + char_size
             xOffset = 0
             num_characters_remaining = max_letters_per_line
-        return {"img":base_canvas, "annotations":annotations}
+        return {"img":base_canvas, "annotations":annotations, "num_lines": num_lines}
 
     return generator
 
